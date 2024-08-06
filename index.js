@@ -41,15 +41,20 @@
     console.log(`🔗 Powered By RTX`);
   });
   
-  const statusMessages = ["Watching URFL", "Watching URFL"];
+  const statusMessages = ["PLAYING", "MUSIC"];
   let currentIndex = 0;
   const channelId = ''; // Set your channel ID here
   
-  (async () => {
-    await noblox.setCookie(process.env.ROBLOX_COOKIE);
-    const currentUser = await noblox.getCurrentUser();
-    console.log(`Logged into Roblox as ${currentUser.UserName}`);
-  })();
+  async function initializeNoblox() {
+    try {
+      await noblox.setCookie(process.env.ROBLOX_COOKIE);
+      const currentUser = await noblox.getCurrentUser();
+      console.log(`Logged into Roblox as ${currentUser.UserName}`);
+    } catch (error) {
+      console.error('Failed to log into Roblox:', error.message);
+      process.exit(1); // Exit the application if unable to authenticate with Roblox
+    }
+  }
   
   async function login() {
     try {
@@ -187,15 +192,14 @@
   
       } else if (commandName === 'contract') {
         const user = options.getUser('user');
-        const role = options.getString('role');
-        const team = options.getString('team');
+        const contractDetails = options.getString('details');
         const channel = client.channels.cache.get(process.env.CONTRACT_CHANNEL_ID);
   
         if (!channel) throw new Error('Contract channel not found');
   
         const embed = new EmbedBuilder()
-          .setTitle('Agreement Contract')
-          .setDescription(`By signing this agreement, you commit to joining and faithfully supporting the Contractor and their team throughout the entire tournament, while performing to the best of your abilities.\n\nSignee: ${user}\nContractor: ${interaction.user}\nContract ID: ${Date.now()}\nTeam: ${team}\nPosition: ${role}\nRole: rotational`)
+          .setTitle('Contract Request')
+          .setDescription(`User: ${user}\nDetails: ${contractDetails}`)
           .setColor('#00FFFF');
   
         const row = new ActionRowBuilder()
@@ -232,6 +236,7 @@
     }
   });
   
+  initializeNoblox();
   login();
   
   /**
