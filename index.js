@@ -41,7 +41,7 @@
     console.log(`🔗 Powered By RTX`);
   });
   
-  const statusMessages = ["Watching URFL", "Watching URFL"];
+  const statusMessages = ["Playing [URFL]Hub", "Playing [URFL]Hub"];
   let currentIndex = 0;
   const channelId = ''; // Set your channel ID here
   
