@@ -41,20 +41,15 @@
     console.log(`🔗 Powered By RTX`);
   });
   
-  const statusMessages = ["PLAYING", "MUSIC"];
+  const statusMessages = ["Watching URFL", "Watching URFL"];
   let currentIndex = 0;
   const channelId = ''; // Set your channel ID here
   
-  async function initializeNoblox() {
-    try {
-      await noblox.setCookie(process.env.ROBLOX_COOKIE);
-      const currentUser = await noblox.getCurrentUser();
-      console.log(`Logged into Roblox as ${currentUser.UserName}`);
-    } catch (error) {
-      console.error('Failed to log into Roblox:', error.message);
-      process.exit(1); // Exit the application if unable to authenticate with Roblox
-    }
-  }
+  (async () => {
+    await noblox.setCookie(process.env.ROBLOX_COOKIE);
+    const currentUser = await noblox.getCurrentUser();
+    console.log(`Logged into Roblox as ${currentUser.UserName}`);
+  })();
   
   async function login() {
     try {
@@ -104,32 +99,42 @@
   
       const { commandName, options } = interaction;
   
-      if (commandName === 'request') {
-        const username = options.getString('username');
-        const aboutMe = options.getString('aboutme') || 'No description provided';
-        const information = options.getString('information') || 'No additional information provided';
-        const channel = client.channels.cache.get(process.env.REQUEST_CHANNEL_ID);
+      if (commandName === 'contract') {
+        const user = options.getUser('user');
+        const role = options.getString('role');
+        const team = options.getString('team');
+        const channel = client.channels.cache.get(process.env.CONTRACT_CHANNEL_ID);
   
-        if (!channel) throw new Error('Request channel not found');
+        if (!channel) throw new Error('Contract channel not found');
   
         const embed = new EmbedBuilder()
-          .setTitle('Request to Join')
-          .setDescription(`Username: ${username}\nAbout Me: ${aboutMe}\nInformation: ${information}`)
-          .setColor('#00FF00');
+          .setTitle('Agreement Contract')
+          .setDescription(`By signing this agreement, you commit to joining and faithfully supporting the Contractor and their team throughout the entire tournament, while performing to the best of your abilities.\n\nSignee: ${user}\nContractor: ${interaction.user}\nContract ID: ${Date.now()}\nTeam: ${team}\nPosition: ${role}\nRole: rotational`)
+          .setColor('#00FFFF');
   
-        const msg = await channel.send({ embeds: [embed] });
-        await msg.react('✅');
+        const row = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('accept')
+              .setLabel('Accept')
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setCustomId('decline')
+              .setLabel('Decline')
+              .setStyle(ButtonStyle.Danger)
+          );
   
-        const filter = (reaction, user) => reaction.emoji.name === '✅' && !user.bot;
-        const collector = msg.createReactionCollector({ filter, max: 1 });
+        await user.send({ embeds: [embed], components: [row] });
   
-        collector.on('collect', async (reaction, user) => {
-          try {
-            const robloxUserId = await noblox.getIdFromUsername(username);
-            await noblox.handleJoinRequest(process.env.ROBLOX_GROUP_ID, robloxUserId, true); // Accept the join request
-            await channel.send(`${username} has been accepted into the Roblox group by ${user.tag}`);
-          } catch (error) {
-            await channel.send(`Failed to accept ${username} into the Roblox group: ${error.message}`);
+        const filter = i => i.customId === 'accept' || i.customId === 'decline';
+        const collector = user.dmChannel.createMessageComponentCollector({ filter, time: 60000 });
+  
+        collector.on('collect', async i => {
+          if (i.customId === 'accept') {
+            await channel.send({ embeds: [embed] });
+            await i.reply(`You have accepted the contract.`);
+          } else {
+            await i.reply(`You have declined the contract.`);
           }
         });
   
@@ -192,14 +197,15 @@
   
       } else if (commandName === 'contract') {
         const user = options.getUser('user');
-        const contractDetails = options.getString('details');
+        const role = options.getString('role');
+        const team = options.getString('team');
         const channel = client.channels.cache.get(process.env.CONTRACT_CHANNEL_ID);
   
         if (!channel) throw new Error('Contract channel not found');
   
         const embed = new EmbedBuilder()
-          .setTitle('Contract Request')
-          .setDescription(`User: ${user}\nDetails: ${contractDetails}`)
+          .setTitle('Agreement Contract')
+          .setDescription(`By signing this agreement, you commit to joining and faithfully supporting the Contractor and their team throughout the entire tournament, while performing to the best of your abilities.\n\nSignee: ${user}\nContractor: ${interaction.user}\nContract ID: ${Date.now()}\nTeam: ${team}\nPosition: ${role}\nRole: rotational`)
           .setColor('#00FFFF');
   
         const row = new ActionRowBuilder()
@@ -236,7 +242,6 @@
     }
   });
   
-  initializeNoblox();
   login();
   
   /**
