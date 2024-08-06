@@ -99,42 +99,32 @@
   
       const { commandName, options } = interaction;
   
-      if (commandName === 'contract') {
-        const user = options.getUser('user');
-        const role = options.getString('role');
-        const team = options.getString('team');
-        const channel = client.channels.cache.get(process.env.CONTRACT_CHANNEL_ID);
+      if (commandName === 'request') {
+        const username = options.getString('username');
+        const aboutMe = options.getString('aboutme') || 'No description provided';
+        const information = options.getString('information') || 'No additional information provided';
+        const channel = client.channels.cache.get(process.env.REQUEST_CHANNEL_ID);
   
-        if (!channel) throw new Error('Contract channel not found');
+        if (!channel) throw new Error('Request channel not found');
   
         const embed = new EmbedBuilder()
-          .setTitle('Agreement Contract')
-          .setDescription(`By signing this agreement, you commit to joining and faithfully supporting the Contractor and their team throughout the entire tournament, while performing to the best of your abilities.\n\nSignee: ${user}\nContractor: ${interaction.user}\nContract ID: ${Date.now()}\nTeam: ${team}\nPosition: ${role}\nRole: rotational`)
-          .setColor('#00FFFF');
+          .setTitle('Request to Join')
+          .setDescription(`Username: ${username}\nAbout Me: ${aboutMe}\nInformation: ${information}`)
+          .setColor('#00FF00');
   
-        const row = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('accept')
-              .setLabel('Accept')
-              .setStyle(ButtonStyle.Success),
-            new ButtonBuilder()
-              .setCustomId('decline')
-              .setLabel('Decline')
-              .setStyle(ButtonStyle.Danger)
-          );
+        const msg = await channel.send({ embeds: [embed] });
+        await msg.react('✅');
   
-        await user.send({ embeds: [embed], components: [row] });
+        const filter = (reaction, user) => reaction.emoji.name === '✅' && !user.bot;
+        const collector = msg.createReactionCollector({ filter, max: 1 });
   
-        const filter = i => i.customId === 'accept' || i.customId === 'decline';
-        const collector = user.dmChannel.createMessageComponentCollector({ filter, time: 60000 });
-  
-        collector.on('collect', async i => {
-          if (i.customId === 'accept') {
-            await channel.send({ embeds: [embed] });
-            await i.reply(`You have accepted the contract.`);
-          } else {
-            await i.reply(`You have declined the contract.`);
+        collector.on('collect', async (reaction, user) => {
+          try {
+            const robloxUserId = await noblox.getIdFromUsername(username);
+            await noblox.handleJoinRequest(process.env.ROBLOX_GROUP_ID, robloxUserId, true); // Accept the join request
+            await channel.send(`${username} has been accepted into the Roblox group by ${user.tag}`);
+          } catch (error) {
+            await channel.send(`Failed to accept ${username} into the Roblox group: ${error.message}`);
           }
         });
   
